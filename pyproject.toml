@@ -7,10 +7,6 @@ requires-python = ">=3.11"
 dependencies = [
     "mcp",
     "holidays",
-]
-
-[project.optional-dependencies]
-dev = [
     "pytest",
 ]
 

@@ -762,10 +762,6 @@ source = { editable = "." }
 dependencies = [
     { name = "holidays" },
     { name = "mcp" },
-]
-
-[package.optional-dependencies]
-dev = [
     { name = "pytest" },
 ]
 
@@ -773,9 +769,8 @@ dev = [
 requires-dist = [
     { name = "holidays" },
     { name = "mcp" },
-    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest" },
 ]
-provides-extras = ["dev"]
 
 [[package]]
 name = "truststore"

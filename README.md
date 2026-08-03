@@ -22,19 +22,25 @@ turning "log 3h on Tempo yesterday" into a structured tool call).
 uv sync
 ```
 
-## Development
-
-Run the dependency resolution without installing anything:
-
-```bash
-uv sync
-```
+## Testing
 
 Verify the project scaffolds correctly (no tests yet, but confirms the package is
 importable and dependencies resolve):
 
 ```bash
 pytest --collect-only
+```
+
+Run all tests against a temp SQLite database:
+
+```bash
+pytest
+```
+
+Run specific test modules:
+
+```bash
+pytest tests/test_models.py
 ```
 
 ## Project status
