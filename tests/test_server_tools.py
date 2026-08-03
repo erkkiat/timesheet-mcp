@@ -420,3 +420,64 @@ class TestReports:
     def test_monthly_report_invalid_group_by(self, server_conn):
         with pytest.raises(ValueError, match="group_by"):
             get_monthly_report(2026, 7, "invalid")
+
+
+# ---------------------------------------------------------------------------
+# Tool-call logging (verifies the wrapper is wired into registered tools)
+# ---------------------------------------------------------------------------
+
+
+def test_tool_call_logs_debug_record(caplog, server_conn):
+    """Calling a tool function emits a DEBUG log record via the wrapper.
+
+    This test would have caught the regression in which tool functions were
+    registered without ``log_tool_call_context``, producing zero log entries
+    in a running server.
+    """
+    import logging
+
+    from timesheet_mcp import logging_config as lc
+    from timesheet_mcp.logging_config import LOGGER_NAME
+    from timesheet_mcp.server import _with_logging
+
+    # Ensure the named logger is at DEBUG and propagates to caplog's handler.
+    logger = logging.getLogger(LOGGER_NAME)
+    logger.setLevel(logging.DEBUG)
+
+    wrapped = _with_logging(create_customer)
+    result = wrapped("Log-Test Corp", "notes for logging")
+    assert result["name"] == "Log-Test Corp"
+
+    # Check caplog captures the log record.
+    assert len(caplog.record_tuples) > 0, (
+        "Expected at least one log record — the _with_logging wrapper "
+        "may not be applied or log_tool_call_context may not emit DEBUG"
+    )
+    debug_records = [r for r in caplog.record_tuples if "Tool call" in str(r[2])]
+    assert debug_records, (
+        "Expected a DEBUG record with 'Tool call' — the wrapper may not "
+        "log via log_tool_call_context"
+    )
+    assert "create_customer" in debug_records[0][2]
+    assert "Log-Test Corp" in debug_records[0][2]
+
+
+def test_registered_tools_are_wrapped():
+    """Verify every tool registered on the MCPServer passed through _with_logging.
+
+    The existing test pattern imports raw functions, so a tool called through
+    the server goes through `_with_logging`.  This test inspects the server's
+    internal ``_tool_manager`` to confirm each registered tool's ``fn`` is a
+    wrapped callable (has ``__wrapped__`` from ``functools.wraps``).
+    """
+    from mcp.server.mcpserver import MCPServer
+    from timesheet_mcp.server import app
+
+    tools = app._tool_manager.list_tools()
+    assert len(tools) == 19, f"Expected 19 tools, got {len(tools)}"
+    for info in tools:
+        fn = info.fn
+        assert hasattr(fn, "__wrapped__"), (
+            f"Tool {info.name!r}: registered fn has no __wrapped__ attr — "
+            "the _with_logging decorator may not have been applied"
+        )
