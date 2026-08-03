@@ -175,10 +175,12 @@ def get_monthly_report(
     sql = (
         "SELECT te.id, te.person_id, te.project_id, te.entry_date, "
         "te.hours, te.description, te.created_at, te.updated_at, "
-        "p.name AS project_name, c.name AS customer_name "
+        "p.name AS project_name, c.name AS customer_name, "
+        "pe.name AS person_name "
         "FROM time_entries te "
         "JOIN projects p ON te.project_id = p.id "
         "JOIN customers c ON p.customer_id = c.id "
+        "JOIN people pe ON te.person_id = pe.id "
         + where_clause
         + " ORDER BY te.entry_date"
     )
@@ -212,7 +214,7 @@ def get_monthly_report(
         elif group_by == "day":
             key = entry["entry_date"]
         elif group_by == "person":
-            key = str(entry["person_id"])
+            key = entry["person_name"]
         elif group_by == "tag":
             # One project can have many tags — emit one group per tag.
             tag_rows = conn.execute(

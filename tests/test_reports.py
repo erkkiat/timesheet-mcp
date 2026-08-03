@@ -235,7 +235,7 @@ class TestReportGroupByPerson:
         g = report["groups"][0]
         assert "expected_hours" in g
         assert "balance" in g
-        assert g["key"] == "1"  # person_id as string
+        assert g["key"] == "TestUser"  # person's name, not ID
         assert g["total_hours"] == 7.5
         # expected_hours ≈ 21 working days * 7.5 daily = 157.5 (July 2026)
 
