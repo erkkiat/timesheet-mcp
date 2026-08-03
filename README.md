@@ -43,6 +43,29 @@ Run specific test modules:
 pytest tests/test_models.py
 ```
 
+## Docker
+
+Build the image:
+
+```bash
+docker build -t timesheet-mcp .
+```
+
+Run the MCP server (stdio transport — requires `-i` for stdin):
+
+```bash
+docker run -i --rm \
+  -v ./data:/app/data \
+  -v ./logs:/app/logs \
+  timesheet-mcp
+```
+
+Mount `./data` and `./logs` from the host so the SQLite database and log
+file persist across container restarts and rebuilds.
+
+Environment variables can be passed with `-e` (defaults are sane):
+`TIMESHEET_DB_PATH`, `TIMESHEET_LOG_LEVEL`, `TIMESHEET_LOG_STDERR`.
+
 ## Project status
 
 This project is under active development. The core data model, repository layer,
