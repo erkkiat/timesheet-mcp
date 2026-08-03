@@ -1,0 +1,22 @@
+# Build context exclusions — nothing that shouldn't be baked into the image
+.git/
+.gitignore
+.idea/
+.pytest_cache/
+__pycache__/
+*/__pycache__/
+.venv/
+venv/
+env/
+data/
+logs/
+.env
+.envrc
+*.egg-info/
+build/
+dist/
+*.pyc
+tests/
+*.md
+!README.md
+!.dockerignore
