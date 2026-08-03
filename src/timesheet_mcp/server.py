@@ -9,6 +9,8 @@ Module entry point:  python -m timesheet_mcp.server
 
 from __future__ import annotations
 
+import functools
+import logging
 from typing import Any
 
 from mcp.server.mcpserver import MCPServer
@@ -26,6 +28,29 @@ from . import repository
 def _to_dicts(items: list) -> list[dict[str, Any]]:
     """Convert a list of objects with ``to_row()`` to plain dicts."""
     return [item.to_row() for item in items]
+
+
+# ---------------------------------------------------------------------------
+# Logging wrapper for MCP tools
+# ---------------------------------------------------------------------------
+
+
+def _with_logging(func):
+    """Wrap *func* so every call is logged via ``log_tool_call_context``."""
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        logger = logging.getLogger(logging_config.LOGGER_NAME)
+        # Convert positional args to keyword-style dict for logging
+        import inspect
+        sig = inspect.signature(func)
+        bound = sig.bind_partial(*args, **kwargs)
+        bound.apply_defaults()
+        bound_dict = dict(bound.arguments)
+        # Remove 'self' if present (for methods)
+        bound_dict.pop("self", None)
+        with logging_config.log_tool_call_context(logger, func.__name__, bound_dict):
+            return func(*args, **kwargs)
+    return wrapper
 
 
 # ---------------------------------------------------------------------------
@@ -314,7 +339,7 @@ for _tool_func in [
     get_working_days,
     get_monthly_report,
 ]:
-    app.tool()(_tool_func)
+    app.tool()(_with_logging(_tool_func))
 
 
 # ---------------------------------------------------------------------------
