@@ -1,0 +1,19 @@
+[project]
+name = "timesheet-mcp"
+version = "0.1.0"
+description = "A local MCP-only timesheet application for logging hours, correcting entries, running monthly reports, and generating invoice data — with Finnish-holiday-aware working-time math."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "mcp",
+    "holidays",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
