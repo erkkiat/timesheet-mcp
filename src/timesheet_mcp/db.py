@@ -2,6 +2,7 @@
 
 import os
 import sqlite3
+import threading
 from pathlib import Path
 
 # Project root is the directory containing pyproject.toml (one level above src/)
@@ -47,6 +48,7 @@ def get_connection(db_path: str | Path | None = None) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
+    conn.execute("PRAGMA busy_timeout = 5000")
     return conn
 
 
@@ -125,4 +127,24 @@ def init_db(conn: sqlite3.Connection | None = None) -> sqlite3.Connection:
     conn.executescript(_SCHEMA_SQL)
     conn.execute(_SEED_SQL)
     conn.commit()
+    return conn
+
+
+# ── Thread-local default connection ────────────────────────────────────────
+
+_thread_local = threading.local()
+
+
+def get_default_connection() -> sqlite3.Connection:
+    """Return a connection to the default DB path, cached per-thread.
+
+    Each OS thread gets its own sqlite3.Connection (created + schema-initialized
+    lazily on first use in that thread) rather than sharing one connection
+    across threads, which sqlite3 does not support.
+    """
+    conn = getattr(_thread_local, "conn", None)
+    if conn is None:
+        conn = get_connection()
+        init_db(conn)
+        _thread_local.conn = conn
     return conn

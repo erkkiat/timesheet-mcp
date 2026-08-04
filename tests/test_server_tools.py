@@ -16,35 +16,33 @@ from timesheet_mcp import config as config_mod
 from timesheet_mcp import reports as reports_mod
 
 # ---------------------------------------------------------------------------
-# Fixture — in-memory DB wired into all module default-conn variables
+# Fixture — in-memory DB wired into the thread-local storage
 # ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
 def server_conn():
-    """Create an in-memory SQLite DB and wire it into all relevant modules.
+    """Create an in-memory SQLite DB and wire it into the thread-local storage.
 
-    The server tool functions call into ``repository`` which falls back to
-    ``repository._default_conn``; ``config._default_conn`` and
-    ``reports._default_conn`` are patched too so that reports and setting
-    lookups hit the same temp DB.
+    All modules (repository, config, reports) now delegate to
+    ``db.get_default_connection()`` when no explicit *conn* is passed.
+    We set the thread-local ``conn`` attribute so the in-memory DB is
+    returned for the current test thread.
     """
     conn = sqlite3.connect(":memory:")
     conn.row_factory = sqlite3.Row
     init_db(conn)
 
-    _orig_repo = repository._default_conn
-    _orig_config = config_mod._default_conn
-    _orig_reports = reports_mod._default_conn
-    repository._default_conn = conn
-    config_mod._default_conn = conn
-    reports_mod._default_conn = conn
+    import timesheet_mcp.db as db_mod
+    _orig = getattr(db_mod._thread_local, "conn", None)
+    db_mod._thread_local.conn = conn
     try:
         yield conn
     finally:
-        repository._default_conn = _orig_repo
-        config_mod._default_conn = _orig_config
-        reports_mod._default_conn = _orig_reports
+        if _orig is None:
+            del db_mod._thread_local.conn
+        else:
+            db_mod._thread_local.conn = _orig
         conn.close()
 
 

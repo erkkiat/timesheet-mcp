@@ -10,24 +10,18 @@ from __future__ import annotations
 import sqlite3
 from typing import Any
 
-from .db import get_connection, init_db
+from .db import get_default_connection
 
 # ── connection management ──────────────────────────────────────────────────
 
-_default_conn: sqlite3.Connection | None = None
 
-
-def _acquire(
+def _get_conn(
     conn: sqlite3.Connection | None,
-) -> tuple[sqlite3.Connection, bool]:
-    """Return (conn, owned).  owned=True means the caller must not close *conn*."""
+) -> sqlite3.Connection:
+    """Return a database connection, using the default when *conn* is omitted."""
     if conn is not None:
-        return conn, False
-    global _default_conn
-    if _default_conn is None:
-        _default_conn = get_connection()
-        init_db(_default_conn)
-    return _default_conn, True
+        return conn
+    return get_default_connection()
 
 
 # ── core settings functions ────────────────────────────────────────────────
@@ -55,7 +49,7 @@ def get_setting(
     ValueError
         If *key* does not exist in the settings table.
     """
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         row = __conn.execute(
             "SELECT value FROM settings WHERE key = ?", (key,)
@@ -87,7 +81,7 @@ def set_setting(
     str
         The value that was stored (as text).
     """
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         text_value = str(value)
         __conn.execute(
@@ -110,7 +104,7 @@ def ensure_settings(
     multiple times.
     """
     if conn is None:
-        __conn, _ = _acquire(None)
+        __conn = _get_conn(None)
         try:
             __conn.execute(
                 "INSERT OR IGNORE INTO settings (key, value) "

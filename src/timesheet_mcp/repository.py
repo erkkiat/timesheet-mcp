@@ -74,22 +74,16 @@ def _validate_non_empty(value: Any, field_name: str) -> None:
 
 # ── connection management ─────────────────────────────────────────────────
 
-_default_conn: sqlite3.Connection | None = None
 
-
-def _acquire(
+def _get_conn(
     conn: sqlite3.Connection | None,
-) -> tuple[sqlite3.Connection, bool]:
-    """Return (conn, owned).  owned=True means the caller must not close *conn*."""
+) -> sqlite3.Connection:
+    """Return a database connection, using the default when *conn* is omitted."""
     if conn is not None:
-        return conn, False
-    global _default_conn
-    if _default_conn is None:
-        from .db import get_connection, init_db
+        return conn
+    from .db import get_default_connection
 
-        _default_conn = get_connection()
-        init_db(_default_conn)
-    return _default_conn, True
+    return get_default_connection()
 
 
 # ── Customers ──────────────────────────────────────────────────────────────
@@ -101,7 +95,7 @@ def create_customer(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> Customer:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         _validate_non_empty(name, "name")
         now = _now_ts()
@@ -129,7 +123,7 @@ def update_customer(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> Customer:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         row = _ensure_row(
             __conn.execute(
@@ -182,7 +176,7 @@ def list_customers(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> list[Customer]:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         if include_archived:
             cursor = __conn.execute(
@@ -204,7 +198,7 @@ def get_customer(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> Customer:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         return Customer.from_row(
             _ensure_row(
@@ -278,7 +272,7 @@ def create_project(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> ProjectWithTags:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         _validate_non_empty(name, "name")
         cust = __conn.execute(
@@ -346,7 +340,7 @@ def update_project(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> ProjectWithTags:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         row = _ensure_row(
             __conn.execute(
@@ -391,7 +385,7 @@ def set_project_tags(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> ProjectWithTags:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         _ensure_row(
             __conn.execute("SELECT id FROM projects WHERE id = ?", (project_id,)).fetchone(),
@@ -419,7 +413,7 @@ def list_projects(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> list[ProjectWithTags]:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         sql = (
             "SELECT p.id, p.customer_id, p.name, p.active, p.notes, p.created_at "
@@ -456,7 +450,7 @@ def get_project(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> ProjectWithTags:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         return _fetch_project(__conn, project_id)
     finally:
@@ -471,7 +465,7 @@ def create_person(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> Person:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         _validate_non_empty(name, "name")
         now = _now_ts()
@@ -497,7 +491,7 @@ def update_person(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> Person:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         row = _ensure_row(
             __conn.execute(
@@ -545,7 +539,7 @@ def list_people(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> list[Person]:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         if active_only:
             rows = __conn.execute(
@@ -573,7 +567,7 @@ def log_time(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> TimeEntry:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         validated_date = _validate_date(entry_date)
         validated_hours = _validate_hours(hours)
@@ -620,7 +614,7 @@ def update_time_entry(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> TimeEntry:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         row = _ensure_row(
             __conn.execute(
@@ -673,7 +667,7 @@ def delete_time_entry(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> dict[str, Any]:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         _ensure_row(
             __conn.execute(
@@ -699,7 +693,7 @@ def list_time_entries(
     *,
     conn: sqlite3.Connection | None = None,
 ) -> list[TimeEntry]:
-    __conn, _ = _acquire(conn)
+    __conn = _get_conn(conn)
     try:
         sql = (
             "SELECT te.id, te.person_id, te.project_id, te.entry_date, "
