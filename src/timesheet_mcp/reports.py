@@ -14,26 +14,20 @@ from typing import Any
 
 from . import config
 from . import holidays_fi
-from .db import get_connection, init_db
+from .db import get_default_connection
 
 # ---------------------------------------------------------------------------
 # Connection management
 # ---------------------------------------------------------------------------
 
-_default_conn: sqlite3.Connection | None = None
-
 
 def _get_conn(
     conn: sqlite3.Connection | None,
 ) -> sqlite3.Connection:
-    """Return a database connection, creating the default one if needed."""
+    """Return a database connection, using the default when *conn* is omitted."""
     if conn is not None:
         return conn
-    global _default_conn
-    if _default_conn is None:
-        _default_conn = get_connection()
-        init_db(_default_conn)
-    return _default_conn
+    return get_default_connection()
 
 
 # ---------------------------------------------------------------------------
