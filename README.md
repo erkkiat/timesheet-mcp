@@ -66,8 +66,47 @@ file persist across container restarts and rebuilds.
 Environment variables can be passed with `-e` (defaults are sane):
 `TIMESHEET_DB_PATH`, `TIMESHEET_LOG_LEVEL`, `TIMESHEET_LOG_STDERR`.
 
+## Install for Claude Desktop (single user, local)
+
+Prerequisites: Docker and git.
+
+```bash
+git clone https://github.com/erkkiat/timesheet-mcp.git
+cd timesheet-mcp
+docker build -t timesheet-mcp:latest .
+mkdir -p data logs
+```
+
+Add a `timesheet` entry under the top-level `mcpServers` key in your Claude
+Desktop config (`~/Library/Application Support/Claude/claude_desktop_config.json`
+on macOS) — merge it in alongside anything else already in that file, and
+replace `/absolute/path/to/timesheet-mcp` with wherever you cloned this repo:
+
+```json
+{
+  "mcpServers": {
+    "timesheet": {
+      "command": "docker",
+      "args": [
+        "run", "-i", "--rm",
+        "--name", "timesheet-mcp",
+        "-v", "/absolute/path/to/timesheet-mcp/data:/app/data",
+        "-v", "/absolute/path/to/timesheet-mcp/logs:/app/logs",
+        "timesheet-mcp:latest"
+      ]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. The `timesheet` server should now be available, backed
+by a SQLite database at `data/timesheet.db` on your own machine — nothing
+leaves your computer. `--name timesheet-mcp` makes Docker refuse a second
+launch while one's already running instead of silently starting a duplicate.
+
 ## Project status
 
-This project is under active development. The core data model, repository layer,
-Finnish-holiday-aware reporting, and MCP server tool registrations are planned —
-see PLAN.md for the full design spec and implementation order.
+`1.0` — the full MCP tool surface (customers, projects, people, time entries,
+Finnish-holiday-aware monthly reports) is implemented, tested, Dockerized, and
+verified end-to-end including under concurrent load. See `PLAN.md` for the
+design spec.
